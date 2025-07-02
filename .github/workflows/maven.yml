@@ -16,8 +16,11 @@ on:
 
 jobs:
   build:
-
-    runs-on: ubuntu-latest-arm64
+    name: Build project
+    runs-on: ${{ matrix.runs-on }}
+    strategy:
+      matrix:
+        runs-on: ["ubuntu-latest", "ubuntu-latest-arm64"]
 
     steps:
     - uses: actions/checkout@v4
