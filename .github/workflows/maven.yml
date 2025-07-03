@@ -37,9 +37,9 @@ jobs:
               -v "$PWD":/project \
               -w /project \
               ghcr.io/graalvm/native-image-community:24.0.1-muslib-ol8-20250415 \
-              mvn -Pnative
+              mvn -Pnative package
           else
-            mvn -Pnative
+            mvn -Pnative package
           fi
 
       - name: Upload artifacts
