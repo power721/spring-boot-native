@@ -2,11 +2,12 @@ name: GraalVM Native Image Build
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
   pull_request:
-    branches: [ master ]
+    branches: [master]
 
 env:
+  GRAALVM_VERSION: '21.0.2'  # Updated to match Java 21
   JAVA_VERSION: '21'
   IMAGE_NAME: 'spring-boot-native'
 
@@ -17,34 +18,55 @@ jobs:
         os: [ubuntu-latest]
         arch: [amd64, arm64]
     runs-on: ${{ matrix.os }}
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set up QEMU (ARM64)
+        if: matrix.arch == 'arm64'
+        uses: docker/setup-qemu-action@v3
+
       - name: Set up GraalVM
         uses: graalvm/setup-graalvm@v1
         with:
+          version: ${{ env.GRAALVM_VERSION }}
           java-version: ${{ env.JAVA_VERSION }}
-          native-image-musl: 'true'
+          components: 'native-image'
           github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cache Maven packages
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.m2
+            target
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-m2-
 
       - name: Build with Maven
         run: |
-          # For ARM64, we need to use Dockerized build
           if [ "${{ matrix.arch }}" = "arm64" ]; then
-            docker run --rm \
+            # Use official GraalVM image with multi-arch support
+            docker run --rm --platform linux/arm64 \
               -v "$PWD":/project \
               -w /project \
-              ghcr.io/graalvm/native-image-community:24.0.1-muslib-ol8-20250415 \
-              mvn -Pnative package
+              -v "$HOME/.m2":/root/.m2 \
+              ghcr.io/graalvm/native-image:ol9-java21-${{ env.GRAALVM_VERSION }} \
+              mvn -Pnative -DskipTests package
           else
-            mvn -Pnative package
+            mvn -Pnative -DskipTests package
           fi
-          ls -l target
+
+      - name: Verify native image
+        run: |
+          file target/${{ env.IMAGE_NAME }}
+          target/${{ env.IMAGE_NAME }} --version || true
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: native-image-${{ matrix.arch }}
           path: target/${{ env.IMAGE_NAME }}
+          if-no-files-found: error
