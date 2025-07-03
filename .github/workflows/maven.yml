@@ -30,7 +30,7 @@ jobs:
         uses: graalvm/setup-graalvm@v1
         with:
           java-version: ${{ env.JAVA_VERSION }}
-          components: 'native-image'
+          native-image-musl: 'true'
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Cache Maven packages
