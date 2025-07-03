@@ -41,26 +41,10 @@ jobs:
           else
             mvn -Pnative package
           fi
+          ls -l target
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: native-image-${{ matrix.arch }}
           path: target/${{ env.IMAGE_NAME }}
-
-      - name: Create multi-arch Docker image
-        if: matrix.arch == 'amd64'  # Only run once
-        run: |
-          # Download both artifacts
-          mkdir -p releases
-          curl -L -o releases/amd64-image \
-            https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts/amd64-image
-          curl -L -o releases/arm64-image \
-            https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts/arm64-image
-          
-          # Build and push multi-arch image
-          docker buildx create --use
-          docker buildx build \
-            --platform linux/amd64,linux/arm64 \
-            -t ghcr.io/$GITHUB_REPOSITORY/${{ env.IMAGE_NAME }}:latest \
-            --push .
