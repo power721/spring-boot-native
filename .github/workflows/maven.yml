@@ -43,7 +43,7 @@ jobs:
           fi
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: native-image-${{ matrix.arch }}
           path: target/${{ env.IMAGE_NAME }}
