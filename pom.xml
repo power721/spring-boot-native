@@ -68,6 +68,7 @@
                             <buildArgs>
                                 <buildArg>--static</buildArg>
                                 <buildArg>--libc=musl</buildArg>
+                                <buildArg>-H:+ReportExceptionStackTraces</buildArg>
                             </buildArgs>
                         </configuration>
                     </plugin>

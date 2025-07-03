@@ -1,44 +1,66 @@
-# This workflow will build a Java project with Maven, and cache/restore any dependencies to improve the workflow execution time
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-java-with-maven
-
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
-
-name: Java CI with Maven
+name: GraalVM Native Image Build
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ main ]
   pull_request:
-    branches: [ "master" ]
+    branches: [ main ]
+
+env:
+  JAVA_VERSION: '21'
+  IMAGE_NAME: 'spring-boot-native'
 
 jobs:
-  build:
-    name: Build project
-    runs-on: ${{ matrix.runs-on }}
+  build-native:
     strategy:
       matrix:
-        runs-on: ["ubuntu-latest", "ubuntu-latest-arm64"]
-
+        os: [ubuntu-latest]
+        arch: [amd64, arm64]
+    runs-on: ${{ matrix.os }}
+    
     steps:
-    - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Setup GraalVM
-      uses: graalvm/setup-graalvm@v1
-      with:
-        java-version: '21'
-        distribution: 'graalvm'
-        native-image-musl: 'true'
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        cache: 'maven'
+      - name: Set up GraalVM
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          native-image-musl: 'true'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Build native with Maven
-      run: |
-        mvn -B -Pnative \
-            -Dnative.image.cache=true \
-            -Dnative-image.parallelism=4 \
-            -DskipTests \
-            package
-        ls -l target
+      - name: Build with Maven
+        run: |
+          # For ARM64, we need to use Dockerized build
+          if [ "${{ matrix.arch }}" = "arm64" ]; then
+            docker run --rm \
+              -v "$PWD":/project \
+              -w /project \
+              ghcr.io/graalvm/native-image-community:22.3.2 \
+              mvn -Pnative native:compile
+          else
+            mvn -Pnative native:compile
+          fi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: native-image-${{ matrix.arch }}
+          path: target/${{ env.IMAGE_NAME }}
+
+      - name: Create multi-arch Docker image
+        if: matrix.arch == 'amd64'  # Only run once
+        run: |
+          # Download both artifacts
+          mkdir -p releases
+          curl -L -o releases/amd64-image \
+            https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts/amd64-image
+          curl -L -o releases/arm64-image \
+            https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts/arm64-image
+          
+          # Build and push multi-arch image
+          docker buildx create --use
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            -t ghcr.io/$GITHUB_REPOSITORY/${{ env.IMAGE_NAME }}:latest \
+            --push .
