@@ -36,7 +36,7 @@ jobs:
             docker run --rm \
               -v "$PWD":/project \
               -w /project \
-              ghcr.io/graalvm/native-image-community:22.3.2 \
+              ghcr.io/graalvm/native-image-community:24.0.1-muslib-ol8-20250415 \
               mvn -Pnative native:compile
           else
             mvn -Pnative native:compile
