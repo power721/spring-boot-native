@@ -35,7 +35,7 @@ jobs:
         run: |
           docker run --rm --platform linux/${{ matrix.arch }} \
             -v "$PWD":/workspace -w /workspace \
-            ghcr.io/graalvm/native-image:ol8-java17-22.3 \
+            ghcr.io/graalvm/native-image:ol8-java17-22.3.3 \
             native-image --no-fallback -H:Name=myapp-${{ matrix.arch }} -cp target/*.jar
 
       - name: Upload ${{ matrix.arch }} binary
