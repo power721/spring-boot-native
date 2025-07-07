@@ -23,28 +23,16 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Setup GraalVM
-        uses: graalvm/setup-graalvm@v1
-        with:
-          java-version: '21'
-          distribution: 'graalvm'
-          native-image-musl: 'true'
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          cache: 'maven'
-
-      - name: Build JAR with Maven
-        run: ./mvnw -Pnative native:compile -DskipTests
-
       - name: Build native image with GraalVM via Maven
         run: |
           docker run --rm --platform=linux/${{ matrix.arch }} \
             -v "$PWD":/workspace -w /workspace \
             -e MAVEN_OPTS="-Dmaven.repo.local=/workspace/.m2" \
             ghcr.io/graalvm/native-image-community:24.0.1 \
-            native-image --static --libc=musl -march=compatibility --no-fallback -H:Name=myapp-${{ matrix.arch }} -jar target/*.jar
+            sh -c "microdnf install -y maven && ./mvnw -Pnative package"
 
       - name: Upload native binary
         uses: actions/upload-artifact@v4
         with:
-          name: myapp-${{ matrix.arch }}
-          path: myapp-${{ matrix.arch }}
+          name: spring-boot-native-${{ matrix.arch }}
+          path: target/spring-boot-native
