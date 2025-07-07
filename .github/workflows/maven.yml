@@ -9,30 +9,25 @@ jobs:
   native-image:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        arch: [amd64, arm64]
-
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
 
-      - name: Set up QEMU (for cross-arch emulation)
-        uses: docker/setup-qemu-action@v3
+      - name: Setup GraalVM
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '21'
+          distribution: 'graalvm'
+          native-image-musl: 'true'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          cache: 'maven'
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build native image with GraalVM via Maven
+      - name: Build native with Maven
         run: |
-          docker run --rm --platform=linux/${{ matrix.arch }} \
-            -v "$PWD":/workspace -w /workspace \
-            -e MAVEN_OPTS="-Dmaven.repo.local=/workspace/.m2" \
-            ghcr.io/graalvm/native-image-community:24.0.1 \
-            ./mvnw -Pnative package
+          mvn -B -DskipTests -Pnative clean package
 
       - name: Upload native binary
         uses: actions/upload-artifact@v4
         with:
-          name: spring-boot-native-${{ matrix.arch }}
+          name: spring-boot-native
           path: target/spring-boot-native
