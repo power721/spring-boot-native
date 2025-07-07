@@ -28,7 +28,7 @@ jobs:
           docker run --rm --platform=linux/${{ matrix.arch }} \
             -v "$PWD":/workspace -w /workspace \
             -e MAVEN_OPTS="-Dmaven.repo.local=/workspace/.m2" \
-            ghcr.io/graalvm/native-image:ol8-java17-22.3.3 \
+            ghcr.io/graalvm/native-image-community:23 \
             mvn -Pnative package
 
       - name: Upload native binary
