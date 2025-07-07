@@ -154,6 +154,7 @@
                                 <buildArg>--enable-http</buildArg>
                                 <buildArg>--enable-https</buildArg>
                                 <buildArg>-march=compatibility</buildArg>
+                                <buildArg>-H:+ReportExceptionStackTraces</buildArg>
                                 <buildArg>-Dorg.sqlite.lib.exportPath=${project.build.directory}</buildArg>
                             </buildArgs>
                         </configuration>
