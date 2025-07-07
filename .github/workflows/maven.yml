@@ -37,7 +37,7 @@ jobs:
           docker run --rm --platform=linux/${{ matrix.arch }} \
             -v "$PWD":/workspace -w /workspace \
             -e MAVEN_OPTS="-Dmaven.repo.local=/workspace/.m2" \
-            ghcr.io/graalvm/native-image-community:24.0.1-muslib \
+            ghcr.io/graalvm/native-image-community:24.0.1 \
             native-image --no-fallback -H:Name=myapp-${{ matrix.arch }} -jar target/*.jar
 
       - name: Upload native binary
