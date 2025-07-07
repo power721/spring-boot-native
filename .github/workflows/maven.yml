@@ -1,70 +1,45 @@
-name: GraalVM Native Image Build
+name: Build Native Images (Matrix)
 
 on:
   push:
-    branches: [master]
-  pull_request:
-    branches: [master]
-
-env:
-  JAVA_VERSION: '17'
-  IMAGE_NAME: 'spring-boot-native'
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
-  build-native:
+  native-image:
+    runs-on: ubuntu-latest
+
     strategy:
       matrix:
-        os: [ubuntu-latest]
         arch: [amd64, arm64]
-    runs-on: ${{ matrix.os }}
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up QEMU (ARM64)
-        if: matrix.arch == 'arm64'
+      - name: Set up QEMU (for arm64 emulation)
         uses: docker/setup-qemu-action@v3
 
-      - name: Set up GraalVM
-        uses: graalvm/setup-graalvm@v1
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
         with:
-          java-version: ${{ env.JAVA_VERSION }}
-          native-image-musl: 'true'
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          distribution: temurin
+          java-version: 17
 
-      - name: Cache Maven packages
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.m2
-            target
-          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-m2-
+      - name: Build JAR with Maven
+        run: ./mvnw clean package -DskipTests
 
-      - name: Build with Maven
+      - name: Build native image for ${{ matrix.arch }}
         run: |
-          if [ "${{ matrix.arch }}" = "arm64" ]; then
-            # Use official GraalVM image with multi-arch support
-            docker run --rm --platform linux/arm64 \
-              -v "$PWD":/project \
-              -w /project \
-              -v "$HOME/.m2":/root/.m2 \
-              ghcr.io/graalvm/native-image:ol8-java17-22.3.3 \
-              mvn -Pnative -DskipTests package
-          else
-            mvn -Pnative -DskipTests package
-          fi
+          docker run --rm --platform linux/${{ matrix.arch }} \
+            -v "$PWD":/workspace -w /workspace \
+            ghcr.io/graalvm/native-image:ol8-java17-22.3 \
+            native-image --no-fallback -H:Name=myapp-${{ matrix.arch }} -cp target/*.jar
 
-      - name: Verify native image
-        run: |
-          file target/${{ env.IMAGE_NAME }}
-          target/${{ env.IMAGE_NAME }} --version || true
-
-      - name: Upload artifacts
+      - name: Upload ${{ matrix.arch }} binary
         uses: actions/upload-artifact@v4
         with:
-          name: native-image-${{ matrix.arch }}
-          path: target/${{ env.IMAGE_NAME }}
-          if-no-files-found: error
+          name: myapp-${{ matrix.arch }}
+          path: myapp-${{ matrix.arch }}
