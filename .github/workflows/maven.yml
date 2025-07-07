@@ -38,7 +38,7 @@ jobs:
             -v "$PWD":/workspace -w /workspace \
             -e MAVEN_OPTS="-Dmaven.repo.local=/workspace/.m2" \
             ghcr.io/graalvm/native-image-community:24.0.1-muslib \
-            native-image --no-fallback -H:Name=myapp-${{ matrix.arch }} -cp target/*.jar
+            native-image --no-fallback -H:Name=myapp-${{ matrix.arch }} -jar target/*.jar
 
       - name: Upload native binary
         uses: actions/upload-artifact@v4
