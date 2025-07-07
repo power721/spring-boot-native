@@ -132,9 +132,6 @@
                                 <buildArg>--enable-http</buildArg>
                                 <buildArg>--enable-https</buildArg>
                                 <buildArg>-march=compatibility</buildArg>
-                                <buildArg>
-                                    -H:ResourceConfigurationFiles=resource-config.json
-                                </buildArg>
                             </buildArgs>
                         </configuration>
                     </plugin>
